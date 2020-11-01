@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uScream</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+
+<body class="vh-100">
+
+
+    <div class="container h-100">
+        <div class="row d-flex h-100 justify-content-center align-items-center">
+            <div style="display: block;" id="getInfoCol" class="col-md-12 text-center">
+                <h1 class="display-4">
+                    uScream
+                </h1>
+
+                <form>
+                    <div class="form-group">
+                        <label class="text-muted lead">Enter Url</label>
+                        <input type="text" id="videoUrl" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn btn-primary" type="button" id="getInfoBtn" style="width: 150px;">Get
+                            Info</button>
+                    </div>
+
+                </form>
+
+            </div>
+
+
+
+            <div id="streamCol" style="display: none;" class="col-md-12 text-center">
+                <img id="videoThumbnail" alt="">
+                <h1 class="mb-1" id="videoTitle"></h1>
+                <small class="text-muted d-block lead" id="videoAuthor"></small>
+                <audio id="videoAudio" controls>
+                </audio>
+
+                <div class="form-group">
+                    <button class="btn btn-primary text-center" id="clearBtn">Clear</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <script>
+
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            console.log('DOM fully loaded and parsed');
+
+            function clearPlayer() {
+                document.querySelector("#videoThumbnail").src = ""
+                document.querySelector("#videoAudio").src = ""
+                document.querySelector("#videoTitle").textContent = ""
+                document.querySelector("#videoAuthor").textContent = ""
+                document.querySelector("#videoUrl").value = ""
+
+                if ('mediaSession' in navigator) {
+
+                    navigator.mediaSession.metadata = null
+                }
+            }
+
+
+            document.querySelector("#getInfoBtn").addEventListener('click', () => {
+                getVideoInfo()
+            })
+            document.querySelector("#clearBtn").addEventListener('click', () => {
+                // getVideoInfo()
+                clearPlayer()
+                toggleViews()
+            })
+
+            function toggleViews() {
+
+                const colSelectors = ["#getInfoCol", "#streamCol"]
+                colSelectors.map(selector => {
+                    const element = document.querySelector(selector)
+                    if (element.style.display === "none") {
+                        element.style.display = "block";
+                    } else {
+                        element.style.display = "none";
+                    }
+                })
+
+            }
+
+
+            function toggleInfoBtnSpinner() {
+
+                const btn = document.querySelector("#getInfoBtn")
+                const spinner = btn.querySelector("#infoSpinner")
+
+                if (spinner == null) {
+                    btn.innerHTML = `<span id="infoSpinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Get Info`
+                } else {
+                    spinner.remove()
+                    btn.innerHTML = `Get Info`
+                }
+
+                btn.disabled = !btn.disabled
+
+
+            }
+
+
+            function initializePlayer(videoInfo) {
+                toggleViews();
+                clearPlayer()
+                const thumbnail = videoInfo.thumbnail.split("?")[0]
+                document.querySelector("#videoThumbnail").src = thumbnail
+                document.querySelector("#videoAudio").src = '/stream/' + videoInfo.videoId
+                document.querySelector("#videoTitle").textContent = videoInfo.title
+                document.querySelector("#videoAuthor").textContent = videoInfo.author
+
+
+                if ('mediaSession' in navigator) {
+
+                    navigator.mediaSession.metadata = new window.MediaMetadata({
+                        title: videoInfo.title,
+                        artist: videoInfo.author,
+                        artwork: [
+                            {
+                                src: thumbnail,
+                                sizes: '480x360', // HeightxWidth
+                                type: 'image/png'
+                            }
+                        ]
+                    });
+                }
+            }
+
+            function getVideoInfo() {
+                try {
+
+                    toggleInfoBtnSpinner()
+                    const videoUrl = document.querySelector("#videoUrl").value
+                    // const getInfoBtn = document.querySelector("getInfoBtn")
+
+                    if (videoUrl.length <= 0) {
+                        alert("Please enter a valid url")
+                        return;
+                    }
+
+                    fetch(`/info?url=${videoUrl}`)
+                        .then(x => x.json())
+                        .then(data => {
+                            if (data.success) {
+                                // videoInfo = 
+                                toggleInfoBtnSpinner()
+                                initializePlayer(data.data)
+
+                            } else {
+                                throw new Error()
+                            }
+                        })
+
+                } catch (error) {
+                    console.log(`errpr -==>`, error);
+                    alert(`Failed to get video info`)
+                }
+
+
+            }
+
+
+        });
+
+
+    </script>
+</body>
+
+</html>
